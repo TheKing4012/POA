@@ -15,11 +15,13 @@ class agent:
         self.position[0] = x
         self.position[1] = y
 
+    #Permet de set toutes les orientations à false
     def reload_orientation(self):
         for key, element in self.orientation.items():
             if element[1]:
                 element[1] = False
 
+    # Permet d'avancer en  x y
     def move_forward(self, x, y):
         self.position[0] = x
         self.position[1] = y
@@ -43,6 +45,29 @@ class agent:
         else:
             self.inventaire_cle[1] = True
             self.inventaire_cle[0] = False
+
+    # Permet d'ouvrir une porte
+     # si l'agent possede la bonne cle pour ouvrir la porte -> return true sinon false
+     # si la porte ne correspond a rien, erreur
+    def open_door(self,type_porte):
+        if type_porte == 3: # porte rouge
+            for i in self.inventaire_cle:
+                if self.inventaire_cle[0]:# cle rouge
+                    self.inventaire_cle[0] = False
+                    return True
+            return False
+        elif type_porte == 4: #porte vert
+            for i in self.inventaire_cle:
+                if self.inventaire_cle[1]:#cle vert
+                    self.inventaire_cle[1] = False
+                    return True
+            return False
+        else:
+            print(f"le type de porte ne correspond à aucune cle...")
+
+
+
+
 
 
 
