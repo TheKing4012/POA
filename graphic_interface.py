@@ -192,7 +192,19 @@ class Player(object):
         print(self.triangle_vertices)
     elif x == 0 and y == -1:
         self.triangle_vertices = [(12, 0), (0, 24), (24, 24)] # Facing up
-        print(self.triangle_vertices) 
+        print(self.triangle_vertices)
+        
+def facing_left():
+    self.triangle_vertices = [(0, 12), (24, 0), (24, 24)]  # Facing left
+    
+def facing_right():
+    self.triangle_vertices = [(24, 12), (0, 0), (0, 24)]  # Facing right
+    
+def facing_up():
+    self.triangle_vertices = [(12, 0), (0, 24), (24, 24)] # Facing up
+    
+def facing_down():
+    self.triangle_vertices = [(12, 24), (0, 0), (24, 0)]  # Facing down
 
 
 class Wall(object):
