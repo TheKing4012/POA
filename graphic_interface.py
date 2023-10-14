@@ -79,6 +79,9 @@ class Player(object):
   key_color = (0, 0, 0)
   open_door = False
   collected_keys = []  # Liste pour stocker les clés collectées
+  triangle_vertices = [(12, 0), (0, 24), (24, 24)]
+  facing = "nord"
+  x, y = 0,0
 
   def __init__(self):
         self.rect = pygame.Rect(SIZE_TILES * 2, SIZE_TILES * 2, SIZE_TILES, SIZE_TILES)
@@ -148,16 +151,21 @@ class Player(object):
         elif target.rect.y > self.rect.y:
             dy = 1
 
+        self.facing(dx,dy)
         self.move(dx, dy)
     else:
         # Aucune cible trouvée, le joueur peut se déplacer au hasard
         dx, dy = random.choice([(1, 0), (-1, 0), (0, 1), (0, -1)])
+        self.facing(dx,dy)
         self.move(dx, dy)
 
 
 
   def move_randomly(self):
     dx, dy = random.choice([(1, 0), (-1, 0), (0, 1), (0, -1)])
+
+    self.facing(dx,dy)
+
     self.move(dx, dy)
 
   def collect_key(self, key_color):
@@ -166,6 +174,37 @@ class Player(object):
   def can_open_door(self, door_color):
       return door_color in self.collected_keys  # Vérifier si l'agent à la clé correspondante 
 
+  def get_triangle_vertices(self):
+    x, y = self.rect.center  # Get the center of the player's rectangle
+    # Calculate the triangle vertices relative to the player's center
+    vertices = [(x + vertex[0] - 12, y + vertex[1] - 12) for vertex in self.triangle_vertices]
+    return vertices
+  
+  def facing(self,x=-1,y=-1):
+    if x == 1 and y == 0:
+        self.triangle_vertices = [(24, 12), (0, 0), (0, 24)]  # Facing right
+        print(self.triangle_vertices)
+    elif x == -1 and y == 0:
+        self.triangle_vertices = [(0, 12), (24, 0), (24, 24)]  # Facing left
+        print(self.triangle_vertices)
+    elif x == 0 and y == 1:
+        self.triangle_vertices = [(12, 24), (0, 0), (24, 0)]  # Facing down
+        print(self.triangle_vertices)
+    elif x == 0 and y == -1:
+        self.triangle_vertices = [(12, 0), (0, 24), (24, 24)] # Facing up
+        print(self.triangle_vertices)
+        
+def facing_left():
+    self.triangle_vertices = [(0, 12), (24, 0), (24, 24)]  # Facing left
+    
+def facing_right():
+    self.triangle_vertices = [(24, 12), (0, 0), (0, 24)]  # Facing right
+    
+def facing_up():
+    self.triangle_vertices = [(12, 0), (0, 24), (24, 24)] # Facing up
+    
+def facing_down():
+    self.triangle_vertices = [(12, 24), (0, 0), (24, 0)]  # Facing down
 
 
 class Wall(object):
@@ -315,13 +354,21 @@ while running:
   # Move the player if an arrow key is pressed
   keyb = pygame.key.get_pressed()
   if keyb[pygame.K_LEFT]:
-    player.move(-1, 0)
+      player.facing = "est"
+      player.triangle_vertices = [(0, 12), (24, 0), (24, 24)]
+      player.move(-1, 0)
   if keyb[pygame.K_RIGHT]:
-    player.move(1, 0)
+      player.facing = "ouest"
+      player.triangle_vertices = [(24, 12), (0, 0), (0, 24)]
+      player.move(1, 0)
   if keyb[pygame.K_UP]:
-    player.move(0, -1)
+      player.facing = "nord"
+      player.triangle_vertices = [(12, 0), (0, 24), (24, 24)]
+      player.move(0, -1)
   if keyb[pygame.K_DOWN]:
-    player.move(0, 1)
+      player.facing = "sud"
+      player.triangle_vertices = [(12, 24), (0, 0), (24, 0)]
+      player.move(0, 1)
 
   # Just added this to make it slightly fun ;)
   for event in pygame.event.get():
@@ -346,7 +393,10 @@ while running:
         color = (255, 0, 0)
     else:  # Clé verte
         color = (0, 255, 0)
-    pygame.draw.rect(screen, color, key.rect)
+
+  #Le player      
+  triangle_vertices = player.get_triangle_vertices()  # Get updated vertices
+  pygame.draw.polygon(screen, (0, 0, 255), triangle_vertices)  # Draw the triangle
 
 
   for door in doors:
