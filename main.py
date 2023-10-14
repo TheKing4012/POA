@@ -1,11 +1,11 @@
 import random
-
+import colorama
 # This is a sample Python script.
 
 # Press Maj+F10 to execute it or replace it with your code.
 # Press Double Shift to search everywhere for classes, files, tool windows, actions, and settings
 
-
+# penser a armoniser les methodes pour eviter d avoir a ajouter des conditions de verif si jamais on decide de rajouter des type de cle ou porte
 class agent:
     position = [0, 0] # position de l'agent x, y
     #tableau des 4 case autour de lui
@@ -20,12 +20,18 @@ class agent:
         self.neighbour[1] = [x + 1, y] # est
         self.neighbour[2] = [x, y + 1] # sud
         self.neighbour[3] = [x - 1, y] # ouest
+    
+    def mise_a_jour_voisin_changement_pos(self):
+        self.neighbour[0] = [self.position[0], self.position[1] - 1]
+        self.neighbour[1] = [self.position[0] + 1, self.position[1]]
+        self.neighbour[2] = [self.position[0], self.position[1] + 1]
+        self.neighbour[3] = [self.position[0] - 1, self.position[1]]
 
     # Permet d'avancer en  x y
     # si l'agent peut avancer -> return true sinon false
-    def move_forward(self, plateau):
+    def move_forward(self, grille):
         # verification de la position de l'agent si ce n est pas un mur
-        if plateau.grille[self.neighbour[self.orientation["nord"]][0]][self.neighbour[self.orientation["nord"]][1]] != 0:
+        if grille[self.neighbour[self.orientation["nord"]][0]][self.neighbour[self.orientation["nord"]][1]] != 0:
             self.position[0] = self.neighbour[self.orientation["nord"]][0]
             self.position[1] = self.neighbour[self.orientation["nord"]][1]
             # on met a jour les voisins
@@ -65,12 +71,18 @@ class agent:
         print(f"nouveau voisin : {self.neighbour}")
 
     def add_key_bag(self, type_cle):
+        type_cle  = 0
         if type_cle == 7:
             self.inventaire_cle[0] = True
+            if self.inventaire_cle[1]:
+                type_cle = 8
             self.inventaire_cle[1] = False
         else:
             self.inventaire_cle[1] = True
+            if self.inventaire_cle[0]:
+                type_cle = 7
             self.inventaire_cle[0] = False
+        return type_cle
 
     # Permet d'ouvrir une porte
      # si l'agent possede la bonne cle pour ouvrir la porte -> return true sinon false
@@ -95,11 +107,14 @@ class agent:
 # class plateau
 class plateau:
     taille = 0
-    enum_entite = {"mur": 0, "agent": 1, "cle": {"rouge": 7, "vert": 8}, "porte": {"rouge": 3, "vert": 4}, "vide": 5, "chemin": 11, "sortie": 12}
+    enum_entite = {"mur": 0, "agent": 1, "cle": {"rouge": 7, "vert": 8}, "porte": {"rouge": 3, "vert": 4}, "vide": 5}
     grille = []
+    non_connected_doors = []
+    array_cle = [] # liste des cle contenue dans le labyrinthe (une case vide peut avoir une cle)
+    array_porte = [] # liste des portes contenue dans le labyrinthe (une case porte peut avoir un agent dessus)
 
     def __init__(self, taille):
-        self.taille = taille - 2
+        self.taille = taille
         self.init_plateau()
 
     def init_plateau(self):
@@ -108,91 +123,28 @@ class plateau:
             for j in range(self.taille):
                 self.grille[i].append(self.enum_entite["mur"])
                       
-
     def print_plateau(self):
-        for j in range(self.taille):
-            for i in range(self.taille):
-                if self.grille[j][i] == self.enum_entite["vide"]:
-                    print("\033[44m  \033[0m", end='')  # Bleu pour le chemin
-                elif self.grille[j][i] == self.enum_entite["mur"]:
-                    print("\033[47m  \033[0m", end='')  # Blanc pour les murs
-                elif self.grille[j][i] == self.enum_entite["cle"]["rouge"]:
-                    print("\033[41m  \033[0m", end='')  # Rouge pour la clé rouge
-                elif self.grille[j][i] == self.enum_entite["cle"]["vert"]:
-                    print("\033[42m  \033[0m", end='')  # Vert pour la clé verte
-                """# afffichage des portes
-                elif self.grille[j][i] == self.enum_entite["porte"]["rouge"]:
-                     # magenta pour la porte rouge
-                    print("\033[105m  \033[0m", end='')
-                elif self.grille[j][i] == self.enum_entite["porte"]["vert"]:
-                     # cyan pour la porte verte
-                    print("\033[102m  \033[0m", end='')"""
-                # ... (ajoutez des couleurs pour les autres éléments si nécessaire)
-            print()  # Nouvelle ligne après chaque rangée
-
-    """def construct_plateau(self):
-        doorSet = 0
-        keySet = 0
-        redDoorSet = 0
-        blueDoorSet = 0
-        redKeySet = 0
-        blueKeySet = 0
-
-        for y in range(self.taille):
-            for x in range(self.taille):
-                if y == round(self.taille / 2) and x == round(self.taille / 2):
-                    self.grille[y][x] = self.enum_entite["vide"]
-                elif y == 0 or y == self.taille - 1:
-                    if x == 0 or x == self.taille - 1:
-                        self.grille[y][x] = self.enum_entite["mur"]
-                    elif doorSet != 2:
-                        if random.randint(0, 10) % 2 == 1:
-                            if redDoorSet == 0:
-                                self.grille[y][x] = self.enum_entite["porte"]["rouge"]
-                                redDoorSet = 1
-                            elif blueDoorSet == 1:
-                                self.grille[y][x] = self.enum_entite["porte"]["vert"]
-                                blueDoorSet = 1
-                            doorSet += 1
-                elif x == 0 or x == self.taille - 1:
-                    if doorSet != 2:
-                        if random.randint(0, 10) % 2 == 1:
-                            if redDoorSet == 0:
-                                self.grille[y][x] = self.enum_entite["porte"]["rouge"]
-                                redDoorSet = 1
-                            elif blueDoorSet == 1:
-                                self.grille[y][x] = self.enum_entite["porte"]["vert"]
-                                blueDoorSet = 1
-                            doorSet += 1
-                        else:
-                            self.grille[y][x] = self.enum_entite["mur"]
-                elif self.grille[y - 1][x] == self.enum_entite["porte"]["vert"] or self.grille[y - 1][x] == self.enum_entite["porte"]["rouge"] or self.grille[y + 1][x] == self.enum_entite["porte"]["vert"] or self.grille[y + 1][x] == self.enum_entite["porte"]["rouge"]:
-                    self.grille[y][x] = self.enum_entite["vide"]
-                elif self.grille[y][x - 1] == self.enum_entite["porte"]["vert"] or self.grille[y][x - 1] == self.enum_entite["porte"]["rouge"] or self.grille[y][x + 1] == self.enum_entite["porte"]["vert"] or self.grille[y][x + 1] == self.enum_entite["porte"]["rouge"]:
-                    self.grille[y][x] = x, self.enum_entite["vide"]
-                elif keySet != 2:
-                    if random.randint(0, 10) % 2 == 1:
-                        if redKeySet == 0:
-                            self.grille[y][x] = self.enum_entite["cle"]["rouge"]
-                            redKeySet = 1
-                        elif blueKeySet == 1:
-                            self.grille[y][x] = self.enum_entite["cle"]["vert"]
-                            blueKeySet = 1
-                        keySet += 1
+        for i in range(self.taille):
+            for j in range(self.taille):
+                if self.grille[i][j] == self.enum_entite["agent"]:
+                    print(colorama.Fore.BLUE + "██", end="")
                 else:
-                    self.grille[y][x] = self.enum_entite["vide"]"""
-    
-    def get_neighbours(self, x, y):
-        neighbours = []
-        if x - 2 > 0:
-            neighbours.append((x-2, y))
-        if x + 2 < self.taille:
-            neighbours.append((x+2, y))
-        if y - 2 > 0:
-            neighbours.append((x, y-2))
-        if y + 2 < self.taille:
-            neighbours.append((x, y+2))
-        return neighbours
+                    if self.grille[i][j] == self.enum_entite["porte"]["rouge"]:
+                        # couleur rose
+                        print(colorama.Fore.MAGENTA + "██", end="")
+                    elif self.grille[i][j] == self.enum_entite["porte"]["vert"]:
+                        # couleur  jauune
+                         print(colorama.Fore.YELLOW + "██", end="")
+                    elif self.grille[i][j] == self.enum_entite["mur"]:
+                        print(colorama.Fore.WHITE + "██", end="")
+                    elif self.grille[i][j] == self.enum_entite["cle"]["rouge"]:
+                        print(colorama.Fore.RED + "██", end="")
+                    elif self.grille[i][j] == self.enum_entite["cle"]["vert"]:
+                        print(colorama.Fore.GREEN + "██", end="")
+                    elif self.grille[i][j] == self.enum_entite["vide"]:
+                        print(colorama.Fore.BLACK + "██", end="")
+                    # ... (ajoutez des couleurs pour les autres éléments si nécessaire)
+            print()  # Nouvelle ligne après chaque rangée
     
     def place_keys(self, num_keys):
         # Obtenir toutes les cellules vides
@@ -207,72 +159,358 @@ class plateau:
             # Alterne entre les clés rouges et vertes
             key_type = self.enum_entite["cle"]["rouge"] if i % 2 == 0 else self.enum_entite["cle"]["vert"]
             self.grille[x][y] = key_type
+            # sauvegarde de la position de la clé
+            self.array_cle.append((x, y, key_type))
     
     def place_doors_on_edge(self, num_doors):
-        # Obtenir toutes les cellules vides qui ont au moins une case vide en tant que voisin et qui sont au bord du plateau
-        empty_cells = [(x, y) for x in range(self.taille) for y in range(self.taille) if self.grille[x][y] == self.enum_entite["vide"] and (x == 0 or y == 0 or x == self.taille - 1 or y == self.taille - 1) and self.get_neighbours(x, y)]
-        # Mélanger la liste de cellules vides
-        random.shuffle(empty_cells)
-        # Placer les portes que sur les cellules vides qui ont au moins une case vide en tant que voisin et qui sont au bord du plateau
-        for i in range(min(num_doors, len(empty_cells))):
-            x, y = empty_cells[i]
+        # Créer une liste des positions possibles sur les bords
+        top_edge = [(0, y) for y in range(1, self.taille-1)]
+        bottom_edge = [(self.taille-1, y) for y in range(1, self.taille-1)]
+        left_edge = [(x, 0) for x in range(1, self.taille-1)]
+        right_edge = [(x, self.taille-1) for x in range(1, self.taille-1)]
+        edge_positions = top_edge + bottom_edge + left_edge + right_edge
+
+        # Mélanger la liste
+        random.shuffle(edge_positions)
+
+        # Placer les portes
+        for i in range(min(num_doors, len(edge_positions))):
+            x, y = edge_positions[i]
             # Alterne entre les portes rouges et vertes
             door_type = self.enum_entite["porte"]["rouge"] if i % 2 == 0 else self.enum_entite["porte"]["vert"]
             self.grille[x][y] = door_type
-        
+            # sauvegarde de la position de la porte
+            self.non_connected_doors.append((x, y))
+            # sauvegarde de la position de la porte
+            self.array_porte.append((x, y, door_type))
 
+    # savoir quelles portes sont connectées au labyrinthe
+    def connect_doors_to_maze(self):
+        # parcourir grille et trouver porte
+        for x in range(self.taille):
+            for y in range(self.taille):
+                if self.grille[x][y] in [self.enum_entite["porte"]["rouge"], self.enum_entite["porte"]["vert"]]:
+                    # Trouver tous les voisins qui sont des murs
+                    neighbours = [n for n in self.get_direct_neighbours(x, y) if self.grille[n[0]][n[1]] == self.enum_entite["vide"]]
+                    
+                    # Si un voisin est une case vide, alors nous avons connecté la porte au labyrinthe
+                    for nx, ny in neighbours:
+                        if self.grille[nx][ny] == self.enum_entite["vide"]:
+                            #self.grille[x][y] = self.enum_entite["vide"]
+                            self.non_connected_doors.remove((x, y))
+                            break
+
+    # fonction qui etend le labyrinthe a partir des portes         
+    def expand_from_door(self, door_x, door_y):
+        # recup case vide 
+        empty_cells = [(x, y) for x in range(self.taille) for y in range(self.taille) if self.grille[x][y] == self.enum_entite["vide"]]
+        # Liste pour suivre les cellules à explorer
+        to_expand = [(door_x, door_y)]
+        visited = set()
+
+        while to_expand:
+            x, y = to_expand.pop()
+            visited.add((x, y))
+
+            # Obtenez les voisins directs qui sont des murs
+            wall_neighbours = [(nx, ny) for nx, ny in self.get_direct_neighbours(x, y) if self.grille[nx][ny] == self.enum_entite["mur"]]
+
+            # S'il n'y a pas de voisins muraux, continuez avec la prochaine cellule
+            if not wall_neighbours:
+                continue
+
+            # Choisissez un voisin mur au hasard
+            nx, ny = random.choice(wall_neighbours)
+
+            # Marquez cette cellule comme vide
+            self.grille[nx][ny] = self.enum_entite["vide"]
+
+            # Vérifiez si cette cellule est adjacente à une cellule vide du premier algorithme
+            if (nx, ny) in empty_cells:
+                # Si c'est le cas, nous avons connecté cette porte au labyrinthe
+                self.non_connected_doors.remove((door_x, door_y))
+                return
+
+            # Ajoutez cette cellule à la liste à explorer
+            to_expand.append((nx, ny))
+
+
+    # fonction qui retourne les voisins d'une case (hors case bord) pour la construction du labyrinthe
+    def get_neighbours(self, x, y):
+        neighbours = []
+        
+        # Liste des positions possibles pour les voisins
+        possible_neighbours = [(x-2, y), (x+2, y), (x, y-2), (x, y+2)]
+        
+        # Vérifiez chaque position pour voir si elle est à l'intérieur des limites et non sur le bord
+        for nx, ny in possible_neighbours:
+            if 1 < nx < self.taille - 1 and 1 < ny < self.taille - 1:
+                neighbours.append((nx, ny))
+                
+        return neighbours
+
+    # fonction qui retourne les voisins directs d'une case (hors case bord) pour relier les portes au labyrinthe
+    def get_direct_neighbours(self, x, y):
+        """Récupère les voisins immédiats (Nord, Sud, Est, Ouest)"""
+        """Récupère les voisins immédiats (Nord, Sud, Est, Ouest) qui ne sont pas sur le bord du plateau"""
+        neighbours = [(x-1, y), (x+1, y), (x, y-1), (x, y+1)]
+        # Filtrer les voisins pour exclure les cellules du bord
+        return [(nx, ny) for nx, ny in neighbours if 0 < nx < self.taille - 1 and 0 < ny < self.taille - 1]
 
     def construct_plateau(self):
-        #self.init_plateau()
-
         # Choisissez un point de départ
-        start_x = random.randint(0, self.taille - 1) // 2 * 2
-        start_y = random.randint(0, self.taille - 1) // 2 * 2
+        start_x = random.randint(1, self.taille - 2)
+        start_y = random.randint(1, self.taille - 2)
         self.grille[start_x][start_y] = self.enum_entite["vide"]
 
-        # Liste des cellules visitées
-        visited = [(start_x, start_y)]
+        # Liste des cellules à visiter
+        to_visit = [(start_x, start_y)]
 
-        while visited:
-            x, y = visited[-1]
-            neighbours = [n for n in self.get_neighbours(x, y) if self.grille[n[0]][n[1]] == self.enum_entite["mur"]]
-            
-            if neighbours:
-                nx, ny = random.choice(neighbours)
+        while to_visit:
+            x, y = random.choice(to_visit)
+            neighbours = self.get_neighbours(x, y)
 
-                # Ouvrez un passage entre les cellules
-                self.grille[nx][ny] = self.enum_entite["vide"]
-                self.grille[nx + (x - nx) // 2][ny + (y - ny) // 2] = self.enum_entite["vide"]
 
-                visited.append((nx, ny))
+            for nx, ny in neighbours:
+                if self.grille[nx][ny] == self.enum_entite["mur"]:
+                    # Briser le mur entre x, y et nx, ny
+                    self.grille[(x + nx) // 2][(y + ny) // 2] = self.enum_entite["vide"]
+                    self.grille[nx][ny] = self.enum_entite["vide"]
+
+                    # Ajouter le voisin à la liste des cellules à visiter
+                    to_visit.append((nx, ny))
+
+            to_visit.remove((x, y))
+
+        # Placer les portes sur les bords
+        self.place_doors_on_edge(2)
+        # Placer les clés
+        self.place_keys(2)
+        #self.print_plateau()
+        # Connecter les portes au labyrinthe
+        self.connect_doors_to_maze()
+        print(f"portes non connectées : {self.non_connected_doors}")
+        #self.print_plateau()
+        # Etendre le labyrinthe à partir des portes
+        for door_x, door_y in self.non_connected_doors:
+            self.expand_from_door(door_x, door_y)
+        # affichage neighbour d une case du labyrinthe
+        print(f"voisin de la case 0, 0 : {self.get_direct_neighbours(0, 0)}")
+        
+        # return case de départ
+        return (start_x, start_y)
+
+    # methode pour faire avancer l'agent (mettre a jour plateau et agent)
+    def move_agent(self, agent, x , y):
+        # verification de la position de l'agent si ce n est pas un mur
+        if self.grille[x][y] != 0:
+            x_old, y_old = agent.position[0], agent.position[1]
+            # on met a jour les voisins
+            verif = agent.move_forward(self.grille)
+            if verif == False:
+                agent.position[0] = x_old
+                agent.position[1] = y_old
+                return False
+            # mise a jour plateau
+            self.grille[agent.position[0]][agent.position[1]] = 1
+            # remttre a vide la case precedente
+            # si la case possede une cle ou une porte, on ne la remet pas a vide
+            if self.array_cle.count((x_old, y_old)) == 0 and self.array_porte.count((x_old, y_old)) == 0:
+                self.grille[x_old][y_old] = 5
             else:
-                visited.pop()
-        self.place_keys(4)
-        # ajouter une collonne au debut et a la fin du plateau(idem pour les lignes)
-        # cre d un plateau temporaire
-        temp = []
-        for i in range(self.taille + 2):
-            temp.append([])
-            for j in range(self.taille + 2):
-                if i == 0 or i == self.taille + 1:
-                    temp[i].append(self.enum_entite["mur"])
-                else:
-                    if j == 0 or j == self.taille + 1:
-                        temp[i].append(self.enum_entite["mur"])
-                    else:
-                        temp[i].append(self.grille[i - 1][j - 1])
-        #self.place_doors_on_edge(2)
+                if self.array_cle.count((x_old, y_old)) != 0:
+                    type_cle = 0
+                    # recuperation type_cle
+                    for cle in self.array_cle:
+                        if cle[0] == x and cle[1] == y:
+                            # Les coordonnées correspondent à celles de la clé
+                            type_cle = cle[2]
+                            break
+                    # mise a jour plateau
+                    self.grille[x_old][y_old] = type_cle
+                elif self.array_porte.count((x_old, y_old)) != 0:
+                    type_porte = 0
+                    # recuperation type_cle
+                    for cle in self.array_porte:
+                        if cle[0] == x and cle[1] == y:
+                            # Les coordonnées correspondent à celles de la clé
+                            type_porte = cle[2]
+                            break
+                    # mise a jour plateau
+                    self.grille[x_old][y_old] = type_porte
 
+            if verif:
+                return True
+            return False
+        return False
 
-    def test(self, agent_):
+    # prendre une cle
+    def take_key(self, agent):
+        # verification de la position de l'agent si c est bien une cle
+        if self.array_cle.count((agent.position[0], agent.position[1], self.enum_entite["cle"]["rouge"])) != 0:
+            cle_recup = agent.add_key_bag(7)
+            if cle_recup != 0:
+                self.array_cle.remove((agent.position[0], agent.position[1], 7))
+                self.array_cle.append((agent.position[0], agent.position[1], cle_recup))
+            else: 
+                self.array_cle.remove((agent.position[0], agent.position[1], 7))
+            return True
+        elif self.array_cle.count((agent.position[0], agent.position[1], self.enum_entite["cle"]["vert"])) != 0:
+            cle_recup = agent.add_key_bag(8)
+            if cle_recup != 0:
+                self.array_cle.remove((agent.position[0], agent.position[1], 8))
+                self.array_cle.append((agent.position[0], agent.position[1], cle_recup))
+            else:
+                self.array_cle.remove((agent.position[0], agent.position[1], 8))
+            return True
+        else:
+            return False
+    
+    # fonction qui verifie que l agent est dans une porte et qu il a la bonne cle pour l ouvrir
+    def open_door(self, agent):
+        # verification de la position de l'agent est sur une porte
+        if self.array_porte.count((agent.position[0], agent.position[1], self.enum_entite["porte"]["rouge"])) != 0:
+            if agent.open_door(3):
+                return True
+        elif self.array_porte.count((agent.position[0], agent.position[1], self.enum_entite["porte"]["vert"])) != 0:
+            if agent.open_door(4):
+                return True
+        else:
+            print("impossible d'ouvrir la porte...")
+            return False
+        
+
+    def test(self,agent):
         print("test")
-        # plateau.print_plateau()
-        plateau.construct_plateau()
-        plateau.print_plateau()
-        # affichage des plateaux
-        # print(f"plateau : {plateau.grille}")
+        #plateau.print_plateau()
+        #--------------------------------------TOUR-----------------------------
+
+        #------------------INITIALISATION 2----------------------
+        # IMPORTANT : avant de faire d'utiliser self.move_agent, il faut verifier que l'agent est bien sur une case valide qui est sur le plateau
+            # C est pour ca que juste avant la boucle while, j'ai mis la position de l'agent a la position de depart donnee par le graphe qui est valide (le depart doit etre forcement sur une case vide)
+        # position de depart de l'agent a recuperer dans la fonction construct_plateau
+        x, y  = plateau.construct_plateau()
+        print("position de depart de l'agent : ", x, y)
+        # mise a jour de la position de l'agent
+        agent.position[0] = x
+        agent.position[1] = y
+        agent.mise_a_jour_voisin_changement_pos()
+        # mise a jour du plateau en fonction de la position de l'agent
+        plateau.grille[agent.position[0]][agent.position[1]] = 1
+        # ----------------------------------------------------
+        
+        # ----DEBUG-------------------------
+        # affichage info case
+        print(f"position de l'agent : {agent.position}")
+        # voisin agen
+        print(f"voisin de l'agent : {agent.neighbour}")
         for i in range(plateau.taille):
-            print(f"ligne {i} : {plateau.grille[i]}")
+                print(f"ligne {i} : {plateau.grille[i]}")
+        #self.move_agent(agent, x, y)
+        # ----------------------------------
+
+        # boucle de jeu avec action random pour le test
+        # ------------------Boucle jeu random----------------------
+        while(True):
+            # action random
+            action = random.randint(0, 3)
+            if action == 0:
+                # avancer
+                x = agent.neighbour[agent.orientation["nord"]][0]
+                y = agent.neighbour[agent.orientation["nord"]][1]
+                verif = self.move_agent(agent, x, y)
+                if verif == False:
+                    print("impossible d'avancer, il y a un mur...")
+                else:
+                    print("j'avance...")
+            elif action == 1:
+                # tourner a gauche
+                agent.left()
+            elif action == 2:
+                # tourner a droite
+                agent.right()
+            elif action == 3:
+                self.take_key(agent)
+            # verification si c est pas la fin du jeu
+            if self.open_door(agent):
+                print("porte ouverte")
+                print("Fin du jeu")
+                break
+
+            # affichage du plateau version couleur
+            print("Original")
+            plateau.print_plateau()
+
+            # affichage des plateaux
+            # print(f"plateau : {plateau.grille}")
+            for i in range(plateau.taille):
+                print(f"ligne {i} : {plateau.grille[i]}")
+        # ---------------------------------------------------------
+        
+        # ------------------Boucle jeu manuel pour voir comment marche chaque commande----------------------
+        """while(True): # exemple de tour 
+
+            #--------------POUR LES TESTS----------------
+            # UTILISER LES ACTIONS DE L AGENT
+            # mise a jour de la position de l'agent
+            #agent.position[0] = x
+            #agent.position[1] = y
+            # ---------------------------------------------------------------
+
+            # information sur l'agent
+            # SE SERVIR DE agent.neighbour pour savoir quelle est l orientation de l agent
+                # 0 : nord, 1 : est, 2 : sud, 3 : ouest
+                # la case au nord indique la case devant lui donc la case ou il peut avancer
+                # les autres cases indiquent les cases a sa gauche, a sa droite et derriere lui (pas utilise pour la partie graphique, c est juste pour le calcul)
+            print(f"position de l'agent : {agent.position}")
+            print(f"voisin de l'agent : {agent.neighbour}")
+
+            # --------------POUR LES TESTS----------------
+            # UTILISER LES ACTIONS DE L AGENT
+            # mise a jour du plateau en fonction de la position de l'agent
+            #plateau.grille[agent.position[0]][agent.position[1]] = 1
+            # ---------------------------------------------------------------
+
+            # verification si c est pas la fin du jeu
+            if self.open_door(agent):
+                print("porte ouverte")
+                print("Fin du jeu")
+                break
+
+            # affichage du plateau version couleur
+            print("Original")
+            plateau.print_plateau()
+
+            # faire une action
+            # avant de faire d'utiliser self.move_agent, il faut verifier que l'agent est bien sur une case valide qui est sur le plateau
+             # C est pour ca que juste avant la boucle while, j'ai mis la position de l'agent a la position de depart donnee par le graphe qui est valide (le depart doit etre forcement sur une case vide)
+            # 1 : avancer
+             # choisir un x et y qui est possible ( la case devant lui (nord -> devant lui))
+            x = agent.neighbour[agent.orientation["nord"]][0]
+            y = agent.neighbour[agent.orientation["nord"]][1]
+            verif = self.move_agent(agent, x, y)
+            if verif == False:
+                print("impossible d'avancer, il y a un mur...")
+            else:
+                print("j'avance...")
+            # prendre une cle
+            verif_2 = self.take_key(agent)
+            if verif_2:
+                print("j'ai pris une cle...")
+            else :
+                print("il n'y a pas de cle...")
+
+
+            # affichage du plateau version couleur
+            print("Apres action")
+            plateau.print_plateau()
+
+            # affichage des plateaux
+            # print(f"plateau : {plateau.grille}")
+            for i in range(plateau.taille):
+                print(f"ligne {i} : {plateau.grille[i]}")
+            break"""
+        #-----------------------------------------------------------------------
     
         # creation de l'agent
         """agent = agent_
@@ -292,11 +530,12 @@ class plateau:
 
 if __name__ == '__main__':
     print('PyCharm')
+    # -------------INITIALISATION 1------------------
     # creation du plateau
     plateau = plateau(10)
-    # creation de l'agent
-    agent = agent(5, 5, plateau)
+    agent = agent(5, 5, plateau) # position de depart de l'agent donne aleatoirement mais qui change apres car il doit commeencer sur les position donnee par le construct_plateau
     plateau.test(agent)
+    # ------------------------------------------------
     
 
-# See PyCharm help at https://www.jetbrains.com/help/pycharm/
+# Amelioration possible : Labirynthe avec une meilleur generation des porte jusqu au case vide existante
