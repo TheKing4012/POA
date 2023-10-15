@@ -1,302 +1,401 @@
+import os
 import random
+import pygame
+import random
+import colorama
+import time
+from AgPl import *
 
-# This is a sample Python script.
 
-# Press Maj+F10 to execute it or replace it with your code.
-# Press Double Shift to search everywhere for classes, files, tool windows, actions, and settings
+SIZE_TILES = 32
 
+    
+class Player(object):
+  key_color =  (0, 0, 0)
+  open_door = False
+  collected_keys = []  # Liste pour stocker les clés collectées
+  triangle_vertices = [(12, 0), (0, 24), (24, 24)]
+  facing_dir = ""
+  orientation = {"ouest" : 0, "sud" : 1, "est" : 2, "nord" : 3}
+  x = 0
+  y = 0
+  agent = set()
+  plateau = set()
 
-class agent:
-    position = [0, 0] # position de l'agent x, y
-    #tableau des 4 case autour de lui
-    neighbour = [[0, 0], [0, 0], [0, 0], [0, 0]] # nord, est, sud, ouest -> x, y
-    orientation = {"nord" : 0, "est" : 1, "sud" : 2, "ouest" : 3} # nord : tete, boolean -> orientation actuelle
-    inventaire_cle = [False, False] # element 1 : cle rouge, element 2 : cle vert
-
-    def __init__(self, x, y, plateau):
-        self.position[0] = x
-        self.position[1] = y
-        self.neighbour[0] = [x, y - 1]# nord
-        self.neighbour[1] = [x + 1, y] # est
-        self.neighbour[2] = [x, y + 1] # sud
-        self.neighbour[3] = [x - 1, y] # ouest
-
-    # Permet d'avancer en  x y
-    # si l'agent peut avancer -> return true sinon false
-    def move_forward(self, plateau):
-        # verification de la position de l'agent si ce n est pas un mur
-        if plateau.grille[self.neighbour[self.orientation["nord"]][0]][self.neighbour[self.orientation["nord"]][1]] != 0:
-            self.position[0] = self.neighbour[self.orientation["nord"]][0]
-            self.position[1] = self.neighbour[self.orientation["nord"]][1]
-            # on met a jour les voisins
-            self.neighbour[0] = [self.position[0], self.position[1] - 1]  # nord
-            self.neighbour[1] = [self.position[0] + 1, self.position[1]]  # est
-            self.neighbour[2] = [self.position[0], self.position[1] + 1]  # sud
-            self.neighbour[3] = [self.position[0] - 1, self.position[1]]  # ouest
-            return True
-        else:
-            print(f"impossible d'avancer, il y a un mur...")
-            return False
-
-    def left(self):
-        # on let a jour ses voisins (neighbour) en decalant les cases des neighbour pour qu'ils correspondent a la nouvelle orientation (ouest = nord, nord = est, est = sud, sud = ouest)
-        # copie de neighbour dans un tableau temporaire
-        temp = self.neighbour.copy()
-        # on met a jour les voisins
-        self.neighbour[0] = temp[3]  # nord
-        self.neighbour[1] = temp[0]
-        self.neighbour[2] = temp[1]
-        self.neighbour[3] = temp[2]
-        # print(f"nouvelle orientation : {self.orientation}")
-        print(f"je tourne a gauche...")
-        print(f"nouveau voisin : {self.neighbour}")
+  def __init__(self, plateau, agent, x, y):
+        # creation de l'agent et du plateau
+        self.agent = agent
+        self.plateau = plateau
+        self.agent.position[0] = 5 
+        self.agent.position[1] = 5 
+        self.agent.mise_a_jour_voisin_changement_pos()
+        self.plateau.grille[x][y] = 1
         
-    def right(self):
-        # on let a jour ses voisins (neighbour) en decalant les cases des neighbour pour qu'ils correspondent a la nouvelle orientation (ouest = sud, nord = ouest, est = nord, sud = est)
-        # copie de neighbour dans un tableau temporaire
-        temp = self.neighbour.copy()
-        # on met a jour les voisins
-        self.neighbour[0] = temp[1]  # nord
-        self.neighbour[1] = temp[2]
-        self.neighbour[2] = temp[3]
-        self.neighbour[3] = temp[0]
-        # print(f"nouvelle orientation : {self.orientation}")
-        print(f"je tourne a droite...")
-        print(f"nouveau voisin : {self.neighbour}")
-
-    def add_key_bag(self, type_cle):
-        if type_cle == 7:
-            self.inventaire_cle[0] = True
-            self.inventaire_cle[1] = False
-        else:
-            self.inventaire_cle[1] = True
-            self.inventaire_cle[0] = False
-
-    # Permet d'ouvrir une porte
-     # si l'agent possede la bonne cle pour ouvrir la porte -> return true sinon false
-     # si la porte ne correspond a rien, erreur
-    def open_door(self,type_porte):
-        if type_porte == 3: # porte rouge
-            for i in self.inventaire_cle:
-                if self.inventaire_cle[0]:# cle rouge
-                    self.inventaire_cle[0] = False
-                    return True
-            return False
-        elif type_porte == 4: #porte vert
-            for i in self.inventaire_cle:
-                if self.inventaire_cle[1]:#cle vert
-                    self.inventaire_cle[1] = False
-                    return True
-            return False
-        else:
-            print(f"le type de porte ne correspond à aucune cle...")
-
-
-# class plateau
-class plateau:
-    taille = 0
-    enum_entite = {"mur": 0, "agent": 1, "cle": {"rouge": 7, "vert": 8}, "porte": {"rouge": 3, "vert": 4}, "vide": 5, "chemin": 11, "sortie": 12}
-    grille = []
-
-    def __init__(self, taille):
-        self.taille = taille - 2
-        self.init_plateau()
-
-    def init_plateau(self):
-        for i in range(self.taille):
-            self.grille.append([])
-            for j in range(self.taille):
-                self.grille[i].append(self.enum_entite["mur"])
-                      
-
-    def print_plateau(self):
-        for j in range(self.taille):
-            for i in range(self.taille):
-                if self.grille[j][i] == self.enum_entite["vide"]:
-                    print("\033[44m  \033[0m", end='')  # Bleu pour le chemin
-                elif self.grille[j][i] == self.enum_entite["mur"]:
-                    print("\033[47m  \033[0m", end='')  # Blanc pour les murs
-                elif self.grille[j][i] == self.enum_entite["cle"]["rouge"]:
-                    print("\033[41m  \033[0m", end='')  # Rouge pour la clé rouge
-                elif self.grille[j][i] == self.enum_entite["cle"]["vert"]:
-                    print("\033[42m  \033[0m", end='')  # Vert pour la clé verte
-                """# afffichage des portes
-                elif self.grille[j][i] == self.enum_entite["porte"]["rouge"]:
-                     # magenta pour la porte rouge
-                    print("\033[105m  \033[0m", end='')
-                elif self.grille[j][i] == self.enum_entite["porte"]["vert"]:
-                     # cyan pour la porte verte
-                    print("\033[102m  \033[0m", end='')"""
-                # ... (ajoutez des couleurs pour les autres éléments si nécessaire)
-            print()  # Nouvelle ligne après chaque rangée
-
-    """def construct_plateau(self):
-        doorSet = 0
-        keySet = 0
-        redDoorSet = 0
-        blueDoorSet = 0
-        redKeySet = 0
-        blueKeySet = 0
-
-        for y in range(self.taille):
-            for x in range(self.taille):
-                if y == round(self.taille / 2) and x == round(self.taille / 2):
-                    self.grille[y][x] = self.enum_entite["vide"]
-                elif y == 0 or y == self.taille - 1:
-                    if x == 0 or x == self.taille - 1:
-                        self.grille[y][x] = self.enum_entite["mur"]
-                    elif doorSet != 2:
-                        if random.randint(0, 10) % 2 == 1:
-                            if redDoorSet == 0:
-                                self.grille[y][x] = self.enum_entite["porte"]["rouge"]
-                                redDoorSet = 1
-                            elif blueDoorSet == 1:
-                                self.grille[y][x] = self.enum_entite["porte"]["vert"]
-                                blueDoorSet = 1
-                            doorSet += 1
-                elif x == 0 or x == self.taille - 1:
-                    if doorSet != 2:
-                        if random.randint(0, 10) % 2 == 1:
-                            if redDoorSet == 0:
-                                self.grille[y][x] = self.enum_entite["porte"]["rouge"]
-                                redDoorSet = 1
-                            elif blueDoorSet == 1:
-                                self.grille[y][x] = self.enum_entite["porte"]["vert"]
-                                blueDoorSet = 1
-                            doorSet += 1
-                        else:
-                            self.grille[y][x] = self.enum_entite["mur"]
-                elif self.grille[y - 1][x] == self.enum_entite["porte"]["vert"] or self.grille[y - 1][x] == self.enum_entite["porte"]["rouge"] or self.grille[y + 1][x] == self.enum_entite["porte"]["vert"] or self.grille[y + 1][x] == self.enum_entite["porte"]["rouge"]:
-                    self.grille[y][x] = self.enum_entite["vide"]
-                elif self.grille[y][x - 1] == self.enum_entite["porte"]["vert"] or self.grille[y][x - 1] == self.enum_entite["porte"]["rouge"] or self.grille[y][x + 1] == self.enum_entite["porte"]["vert"] or self.grille[y][x + 1] == self.enum_entite["porte"]["rouge"]:
-                    self.grille[y][x] = x, self.enum_entite["vide"]
-                elif keySet != 2:
-                    if random.randint(0, 10) % 2 == 1:
-                        if redKeySet == 0:
-                            self.grille[y][x] = self.enum_entite["cle"]["rouge"]
-                            redKeySet = 1
-                        elif blueKeySet == 1:
-                            self.grille[y][x] = self.enum_entite["cle"]["vert"]
-                            blueKeySet = 1
-                        keySet += 1
-                else:
-                    self.grille[y][x] = self.enum_entite["vide"]"""
-    
-    def get_neighbours(self, x, y):
-        neighbours = []
-        if x - 2 > 0:
-            neighbours.append((x-2, y))
-        if x + 2 < self.taille:
-            neighbours.append((x+2, y))
-        if y - 2 > 0:
-            neighbours.append((x, y-2))
-        if y + 2 < self.taille:
-            neighbours.append((x, y+2))
-        return neighbours
-    
-    def place_keys(self, num_keys):
-        # Obtenir toutes les cellules vides
-        empty_cells = [(x, y) for x in range(self.taille) for y in range(self.taille) if self.grille[x][y] == self.enum_entite["vide"]]
-
-        # Mélanger la liste de cellules vides
-        random.shuffle(empty_cells)
-
-        # Placer les clés
-        for i in range(min(num_keys, len(empty_cells))):
-            x, y = empty_cells[i]
-            # Alterne entre les clés rouges et vertes
-            key_type = self.enum_entite["cle"]["rouge"] if i % 2 == 0 else self.enum_entite["cle"]["vert"]
-            self.grille[x][y] = key_type
-    
-    def place_doors_on_edge(self, num_doors):
-        # Obtenir toutes les cellules vides qui ont au moins une case vide en tant que voisin et qui sont au bord du plateau
-        empty_cells = [(x, y) for x in range(self.taille) for y in range(self.taille) if self.grille[x][y] == self.enum_entite["vide"] and (x == 0 or y == 0 or x == self.taille - 1 or y == self.taille - 1) and self.get_neighbours(x, y)]
-        # Mélanger la liste de cellules vides
-        random.shuffle(empty_cells)
-        # Placer les portes que sur les cellules vides qui ont au moins une case vide en tant que voisin et qui sont au bord du plateau
-        for i in range(min(num_doors, len(empty_cells))):
-            x, y = empty_cells[i]
-            # Alterne entre les portes rouges et vertes
-            door_type = self.enum_entite["porte"]["rouge"] if i % 2 == 0 else self.enum_entite["porte"]["vert"]
-            self.grille[x][y] = door_type
+        self.x = 5 * SIZE_TILES
+        self.y = 5 * SIZE_TILES
+        
+        self.rect = pygame.Rect(self.x, self.y, SIZE_TILES, SIZE_TILES)
+        self.collected_keys = set()  # Use a set to store collected keys
+        self.facing_dir = self.agent.mon_orientation
         
 
+  def move(self, dx, dy):
+        new_x = self.rect.x + dx * SIZE_TILES
+        new_y = self.rect.y + dy * SIZE_TILES
 
-    def construct_plateau(self):
-        #self.init_plateau()
+        # Check for collision with walls and doors
+        collision = any(
+            (new_x, new_y) == (wall.rect.x, wall.rect.y) for wall in walls
+        )
 
-        # Choisissez un point de départ
-        start_x = random.randint(0, self.taille - 1) // 2 * 2
-        start_y = random.randint(0, self.taille - 1) // 2 * 2
-        self.grille[start_x][start_y] = self.enum_entite["vide"]
+        # Check if the player has the key to open the door
+        if any(
+            (new_x, new_y) == (door.rect.x, door.rect.y) and not player.can_open_door(door.get_color())
+            for door in doors
+        ):
+            # Player doesn't have the key, prevent movement
+            collision = True
 
-        # Liste des cellules visitées
-        visited = [(start_x, start_y)]
+        if not collision:
+            self.rect.x = new_x
+            self.rect.y = new_y
 
-        while visited:
-            x, y = visited[-1]
-            neighbours = [n for n in self.get_neighbours(x, y) if self.grille[n[0]][n[1]] == self.enum_entite["mur"]]
-            
-            if neighbours:
-                nx, ny = random.choice(neighbours)
+  def move_towards_key_or_door(self, keys, doors):
+    # Calcule la distance entre le joueur et chaque clé
+    key_distances = [(key, abs(self.rect.x - key.rect.x) + abs(self.rect.y - key.rect.y)) for key in keys]
 
-                # Ouvrez un passage entre les cellules
-                self.grille[nx][ny] = self.enum_entite["vide"]
-                self.grille[nx + (x - nx) // 2][ny + (y - ny) // 2] = self.enum_entite["vide"]
+    # Trie les clés par distance croissante
+    key_distances.sort(key=lambda x: x[1])
 
-                visited.append((nx, ny))
-            else:
-                visited.pop()
-        self.place_keys(4)
-        # ajouter une collonne au debut et a la fin du plateau(idem pour les lignes)
-        # cre d un plateau temporaire
-        temp = []
-        for i in range(self.taille + 2):
-            temp.append([])
-            for j in range(self.taille + 2):
-                if i == 0 or i == self.taille + 1:
-                    temp[i].append(self.enum_entite["mur"])
-                else:
-                    if j == 0 or j == self.taille + 1:
-                        temp[i].append(self.enum_entite["mur"])
-                    else:
-                        temp[i].append(self.grille[i - 1][j - 1])
-        #self.place_doors_on_edge(2)
+    # Calcule la distance entre le joueur et chaque porte
+    door_distances = [(door, abs(self.rect.x - door.rect.x) + abs(self.rect.y - door.rect.y)) for door in doors]
 
+    # Trie les portes par distance croissante
+    door_distances.sort(key=lambda x: x[1])
 
-    def test(self, agent_):
-        print("test")
-        # plateau.print_plateau()
-        plateau.construct_plateau()
-        plateau.print_plateau()
-        # affichage des plateaux
-        # print(f"plateau : {plateau.grille}")
-        for i in range(plateau.taille):
-            print(f"ligne {i} : {plateau.grille[i]}")
+    # Si le joueur n'a pas de clé, il se dirige vers la clé la plus proche
+    if not self.collected_keys:
+        target = key_distances[0][0] if key_distances else None
+    else:
+        # Si le joueur a des clés, il se dirige vers la porte la plus proche qu'il peut ouvrir
+        target = None
+        for door, distance in door_distances:
+            if door.get_color() in self.collected_keys:
+                target = door
+                break
+
+    if target:
+        # Calcul du déplacement pour atteindre la cible
+        dx = 0
+        dy = 0
+
+        if target.rect.x < self.rect.x:
+            dx = -1
+        elif target.rect.x > self.rect.x:
+            dx = 1
+
+        if target.rect.y < self.rect.y:
+            dy = -1
+        elif target.rect.y > self.rect.y:
+            dy = 1
+
+        self.move(dx, dy)
+    else:
+        # Aucune cible trouvée, le joueur peut se déplacer au hasard
+        dx, dy = random.choice([(1, 0), (-1, 0), (0, 1), (0, -1)])
+        self.move(dx, dy)
+
+  def move_randomly(self):
+    dx, dy = random.choice([(1, 0), (-1, 0), (0, 1), (0, -1)])
+    self.x = dx
+    self.y = dy
     
-        # creation de l'agent
-        """agent = agent_
-        print(f"position de l'agent : {agent.position}")
-        print(f"voisin de l'agent : {agent.neighbour}")
-        # deplacement de l'agent
-        agent.move_forward(plateau)
-        print(f"position de l'agent : {agent.position}")
-        print(f"voisin de l'agent : {agent.neighbour}")
-        # mise a jour du plateau en fonction de la position de l'agent
-        plateau.grille[agent.position[0]][agent.position[1]] = 1
-        plateau.print_plateau()"""
-        
+    print(dx, dy)
+    self.facing(dx,dy)
 
+    self.move(dx, dy)
 
+  def collect_key(self, key_color):
+      self.collected_keys.add(key_color)  # Add the key color to collected keys
 
+  def can_open_door(self, door_color):
+      return door_color in self.collected_keys  # Check if the player has the corresponding key
 
-if __name__ == '__main__':
-    print('PyCharm')
-    # creation du plateau
-    plateau = plateau(10)
-    # creation de l'agent
-    agent = agent(5, 5, plateau)
-    plateau.test(agent)
+  def get_triangle_vertices(self):
+    x, y = self.rect.center  # Get the center of the player's rectangle
+    # Calculate the triangle vertices relative to the player's center
+    vertices = [(x + vertex[0] - 12, y + vertex[1] - 12) for vertex in self.triangle_vertices]
+    return vertices
+
+  def nouveau_orientation(orientation):
+    pass
     
+  def move_ag_pl(self):
+    x_old = self.agent.position[0] 
+    y_old = self.agent.position[1]
+    voisins = self.plateau.get_direct_neighbours(x_old,y_old)
+    #ici pour le teste le voisin vien du nord
+    print("orientation : ", self.facing_dir)
 
-# See PyCharm help at https://www.jetbrains.com/help/pycharm/
+    voisin = 0
+
+    if(len(voisins[self.orientation[self.facing_dir]]) < 3):
+        voisin = voisins[2]
+    else:
+        voisin = voisins[self.orientation[self.facing_dir]]
+
+    x_voisin_direct = voisin[0]
+    y_voisin_direct = voisin[1]
+
+    if self.plateau.move_agent(self.agent,x_voisin_direct,y_voisin_direct):
+        self.agent.mise_a_jour_voisin_changement_pos()
+        #afficher_plateau(plateau.grille)
+
+        # mettre a jour la position dans pygame
+        print("avancer au voisin")
+
+        # si clé alors prendre la clée
+        if self.plateau.take_key(self.agent):
+            # mettre a jour sur pygame
+            pass
+
+        # si porte alors tester de l'ouvrir
+            # sinon revenir en arriere et tourner à droite
+        if self.plateau.open_door(self.agent) == False:
+            self.plateau.move_agent(self.agent,x_old,y_old)
+            #afficher_plateau(plateau.grille)
+            print("je recule car je ne peut pas ouvrir la porte")
+            self.agent.right()
+            #print("je tourne à droite"
+            #mise a jour de direction dans pygame
+            self.facing(self.facing_dir)
+            self.agent.mise_a_jour_voisin_changement_pos()
+    else:
+      self.agent.right()
+      #mettre a jour la position dans pygame
+      self.facing(self.facing_dir)
+
+  def facing(self,dir):
+    if dir == "sud":
+        self.triangle_vertices = [(24, 12), (0, 0), (0, 24)]  # Facing right est
+        print(self.triangle_vertices)
+    elif dir == "nord":
+        self.triangle_vertices = [(0, 12), (24, 0), (24, 24)]  # Facing left ouest
+        print(self.triangle_vertices)
+    elif dir == "ouest":
+        self.triangle_vertices = [(12, 24), (0, 0), (24, 0)]  # Facing down sud
+        print(self.triangle_vertices)
+    elif dir == "est":
+        self.triangle_vertices = [(12, 0), (0, 24), (24, 24)] # Facing up nord
+        print(self.triangle_vertices) 
+  
+  def facing_left(self):
+     self.triangle_vertices = [(0, 12), (24, 0), (24, 24)]  # Facing left
+  
+  def facing_right(self):
+     self.triangle_vertices = [(24, 12), (0, 0), (0, 24)]  # Facing right
+
+class Wall(object):
+  def __init__(self, pos):
+    walls.append(self)
+    self.rect = pygame.Rect(pos[0], pos[1], SIZE_TILES, SIZE_TILES)
+
+class Key(object):
+
+  color = (0, 0, 0)
+
+  def __init__(self, pos, color):
+    keys.append(self)
+    self.color = color
+    self.rect = pygame.Rect(SIZE_TILES / 2 + pos[0], SIZE_TILES / 2 + pos[1],
+                            SIZE_TILES / 2, SIZE_TILES / 2)
+
+  def get_color(self):
+    return self.color
+
+
+class Door(object):
+
+  color = (0, 0, 0)
+
+  def __init__(self, pos, color):
+    doors.append(self)
+    self.color = color
+    self.rect = pygame.Rect(pos[0], pos[1], SIZE_TILES, SIZE_TILES)
+
+  def get_color(self):
+    return self.color
+
+  def is_accessible(self, player):
+          return self.get_color() in player.collected_keys
+
+
+# Initialise pygame
+os.environ["SDL_VIDEO_CENTERED"] = "1"
+pygame.init()
+
+# Set up the display
+pygame.display.set_caption("Sortir du labyrinthe !")
+screen = pygame.display.set_mode((SIZE_TILES * 10, SIZE_TILES * 10))
+
+clock = pygame.time.Clock()
+walls = []  # List to hold the walls
+keys = []
+doors = []
+
+# Holds the level layout in a list of strings.
+level1 = [[0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 5, 5, 5, 0, 0, 0, 7, 0, 0],
+          [0, 5, 5, 5, 5, 5, 5, 5, 0, 0], [0, 8, 0, 5, 0, 0, 0, 5, 0, 0],
+          [0, 0, 0, 0, 0, 0, 0, 5, 0, 0], [0, 0, 0, 5, 5, 5, 0, 5, 0, 0],
+          [4, 5, 5, 5, 0, 5, 5, 5, 0, 0], [0, 5, 1, 5, 3, 0, 0, 0, 0, 0],
+          [0, 5, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]]
+
+pl = plateau(10)
+X,Y= pl.construct_plateau()
+ag = agent(5, 5, plateau)
+#level = level1
+player = Player(pl,ag, X,Y)  # Create the player
+
+level = pl.grille
+
+enum_entite = {
+    "mur": 0,
+    "agent": 1,
+    "cle": {
+        "rouge": 7,
+        "vert": 8
+    },
+    "porte": {
+        "rouge": 3,
+        "vert": 4
+    },
+    "vide": 5
+}
+
+x = y = 0
+for row in level:
+  for col in row:
+    if col == 0:  #MUR
+      Wall((x, y))
+    if col == 8:  #CLE VERT
+      Key((x, y), (0, 255, 0))
+    if col == 7:  #CLE ROUGE
+      Key((x, y), (255, 0, 0))
+    if col == 3:  #PORTE ROUGE
+      Door((x, y), (255, 0, 0))
+    if col == 4:  #PORTE VERT
+      Door((x, y), (0, 255, 0))
+    x += SIZE_TILES
+  y += SIZE_TILES
+  x = 0
+
+running = True
+while running:
+  clock.tick(60)
+
+  # Vérifie si le joueur est sur la même case qu'une clé
+  for key in keys:
+    if player.rect.colliderect(key.rect):
+        keys.remove(key)
+        player.collect_key(key.get_color())
+
+  # Check if the player can open a door
+  for door in doors:
+      if player.rect.colliderect(door.rect):
+          door_color = door.get_color()
+          if player.can_open_door(door_color):
+              doors.remove(door) 
+
+
+  # L'agent se déplace de manière intelligente 
+  #player.move_towards_key_or_door(keys, doors)
+  
+  # L'agent se déplace de manière pas intelligente 
+  #player.move_randomly()
+
+   # L'agent se déplace de manière pas intelligente 
+  player.move_ag_pl()
+
+  pygame.time.delay(50)  # Ajoute une pause de 200 millisecondes
+
+
+  for event in pygame.event.get():
+    if event.type == pygame.QUIT:
+      running = False
+    if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
+      running = False
+
+  # Move the player if an arrow key is pressed
+  keyb = pygame.key.get_pressed()
+  if keyb[pygame.K_LEFT]:
+      player.facing = "LEFT"
+      player.triangle_vertices = [(0, 12), (24, 0), (24, 24)]
+      player.move(-1, 0)
+  if keyb[pygame.K_RIGHT]:
+      player.facing = "RIGHT"
+      player.triangle_vertices = [(24, 12), (0, 0), (0, 24)]
+      player.move(1, 0)
+  if keyb[pygame.K_UP]:
+      player.facing = "UP"
+      player.triangle_vertices = [(12, 0), (0, 24), (24, 24)]
+      player.move(0, -1)
+  if keyb[pygame.K_DOWN]:
+      player.facing = "DOWN"
+      player.triangle_vertices = [(12, 24), (0, 0), (24, 0)]
+      player.move(0, 1)
+
+
+
+  # Just added this to make it slightly fun ;)
+  for event in pygame.event.get():
+    if event.type == pygame.QUIT:
+      running = False
+
+  #if (player.door_opened()):
+  #   running = False
+  
+  # Draw the scene
+  screen.fill((255, 255, 255))
+
+  
+  for wall in walls:
+    pygame.draw.rect(screen, (0, 0, 0), wall.rect)
+    #pygame.draw.rect(screen, (255, 255, 255), end_rect)
+    #pygame.draw.rect(screen, (255, 200, 0), player.rect)
+
+
+  pygame.draw.rect(screen, (255, 200, 0), player.rect)
+  triangle_vertices = player.get_triangle_vertices()  # Get updated vertices
+  pygame.draw.polygon(screen, (0, 0, 255), triangle_vertices)  # Draw the triangle
+  
+  for key in keys:
+    if key.get_color() == (255, 0, 0):  # Clé rouge
+        color = (255, 0, 0)
+    else:  # Clé verte
+        color = (0, 255, 0)
+    pygame.draw.rect(screen, color, key.rect)
+
+  
+  for door in doors:
+    if door.get_color() == (255, 0, 0):  # Porte rouge
+        color = (255, 0, 0)
+    else:  # Porte verte
+        color = (0, 255, 0)
+    pygame.draw.rect(screen, color, door.rect)
+
+  
+  # colorGreen = (0, 255, 0) # Vert 
+  # colorRed = (255, 0, 0) # Rouge 
+  # pygame.draw.rect(screen, colorRed, key.rect)
+  # pygame.draw.rect(screen, colorGreen, key.rect)
+
+  # pygame.draw.rect(screen, colorGreen, door.rect)
+  # pygame.draw.rect(screen, colorRed, door.rect)
+
+
+  # gfxdraw.filled_circle(screen, 255, 200, 5, (0,128,0))
+  pygame.display.flip()
+  clock.tick(360)
+
+
+pygame.quit()
